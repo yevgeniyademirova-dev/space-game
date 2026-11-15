@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Космическое путешествие</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d2c;font-family:system-ui,Arial;color:#fff;touch-action:none}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+#hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.pill{background:#111b50dd;border:1px solid #9fbaff88;border-radius:18px;padding:8px 12px;font-weight:800;font-size:14px;text-shadow:0 1px 3px #000}
+#hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);padding:8px 13px;border-radius:18px;background:#111b50dd;font-size:13px;text-align:center;white-space:nowrap;pointer-events:none}
+#overlay{position:fixed;inset:0;background:#050923cc;display:flex;align-items:center;justify-content:center;padding:18px}
+.panel{width:min(440px,100%);background:linear-gradient(145deg,#4544a6,#18265e);border:2px solid #c6d2ff;border-radius:26px;padding:24px;text-align:center;box-shadow:0 15px 50px #0009}
+.rocket{font-size:64px}h1{font-size:clamp(27px,7vw,40px);margin:4px 0 8px}p{line-height:1.45;margin:8px 0 20px}
+button{border:0;border-radius:18px;background:#ffd45a;color:#22234d;font-weight:900;font-size:20px;padding:13px 25px;cursor:pointer;touch-action:manipulation}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><div class="pill">⭐ Звёзды: <span id="score">0</span></div><div class="pill">🪐 Планета: <span id="planet">1</span>/5</div></div>
+<div id="hint">Игра уже началась! Веди пальцем влево и вправо • Собирай ⭐</div>
+<div id="overlay" class="hidden"><div class="panel" id="panel"></div></div>
+<script>
+(()=>{
+const c=document.getElementById('c'),g=c.getContext('2d'),overlay=document.getElementById('overlay'),panel=document.getElementById('panel');
+let w=0,h=0,dpr=1,active=false,landed=false,score=0,planet=0,progress=0,rocket={x:0,y:0},stars=[],rocks=[],bg=[],targetX=0,last=0,frame=0;
+const planets=[['Луна','🌕','#aeb7d4'],['Марс','🔴','#e97957'],['Ледяная планета','🪐','#71d9e8'],['Изумрудная планета','🌎','#58c78b'],['Золотая планета','🪐','#e7b64f']];
+function resize(){dpr=Math.min(devicePixelRatio||1,2);w=innerWidth;h=innerHeight;c.width=w*dpr;c.height=h*dpr;g.setTransform(dpr,0,0,dpr,0,0);if(!rocket.x){rocket.x=w/2;rocket.y=h*.72;targetX=rocket.x}}
+addEventListener('resize',resize);resize();
+for(let i=0;i<100;i++)bg.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*2+.4,a:Math.random()*.7+.2});
+function reset(){score=0;planet=0;progress=0;stars=[];rocks=[];rocket={x:w/2,y:h*.72};targetX=rocket.x;for(let i=0;i<9;i++)spawnStar(h-i*105);updateHud()}
+function spawnStar(y=-30){stars.push({x:35+Math.random()*(w-70),y,r:10+Math.random()*4,spin:Math.random()*6})}
+function spawnRock(){rocks.push({x:30+Math.random()*(w-60),y:-35,r:13+Math.random()*10,rot:Math.random()*6})}
+function updateHud(){document.getElementById('score').textContent=score;document.getElementById('planet').textContent=planet+1}
+function start(){reset();active=true;landed=false;overlay.classList.add('hidden');last=performance.now()}
+document.getElementById('start').addEventListener('click',start);
+function showLanding(){active=false;landed=true;overlay.classList.remove('hidden');panel.innerHTML=`<div class="rocket">${planets[planet][1]}</div><h1>Приземление!</h1><h2>${planets[planet][0]}</h2><p>Ура! Ты собрал звёздочки и добрался до новой планеты. Готов лететь дальше?</p><button id="next">${planet===4?'ПОЛЕТЕТЬ СНОВА':'СЛЕДУЮЩАЯ ПЛАНЕТА'}</button>`;document.getElementById('next').addEventListener('click',()=>{if(planet===4){panel.innerHTML=`<div class="rocket">🏆🚀</div><h1>ГЕРОЙ ГАЛАКТИКИ!</h1><p>Ты посетил все планеты и собрал ${score} звёздочек!</p><button id="again">ИГРАТЬ СНОВА</button>`;document.getElementById('again').addEventListener('click',()=>{panel.innerHTML=`<div class="rocket">🚀</div><h1>КОСМИЧЕСКОЕ ПУТЕШЕСТВИЕ</h1><p>Лети на ракете, собирай звёздочки и приземляйся на удивительных планетах!</p><button id="start">СТАРТ!</button>`;document.getElementById('start').addEventListener('click',start);start()});}else{planet++;progress=0;stars=[];rocks=[];for(let i=0;i<9;i++)spawnStar(h-i*105);updateHud();active=true;landed=false;overlay.classList.add('hidden');last=performance.now();}})}
+c.addEventListener('pointerdown',e=>{targetX=e.clientX;if(active)c.setPointerCapture(e.pointerId)});
+c.addEventListener('pointermove',e=>{if(active)targetX=e.clientX});
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')targetX-=45;if(e.key==='ArrowRight')targetX+=45});
+function drawRocket(x,y){g.save();g.translate(x,y);g.font='54px system-ui';g.textAlign='center';g.textBaseline='middle';g.fillText('🚀',0,0);g.restore()}
+function drawPlanet(){let p=planets[planet],r=Math.min(w*.34,125);let x=w/2,y=h*.23;g.save();g.shadowColor=p[2];g.shadowBlur=32;g.fillStyle=p[2];g.beginPath();g.arc(x,y,r,0,7);g.fill();g.shadowBlur=0;g.globalAlpha=.25;g.fillStyle='#fff';for(let i=0;i<6;i++){g.beginPath();g.ellipse(x+Math.sin(i*2)*r*.4,y+Math.cos(i*3)*r*.35, r*.24,r*.09,i*.7,0,7);g.fill()}g.restore();g.fillStyle='#fff';g.font='bold 18px system-ui';g.textAlign='center';g.fillText('ПЛАНЕТА ВПЕРЕДИ',x,y+r+28)}
+function update(dt){frame+=dt;progress+=dt;rocket.x+=(targetX-rocket.x)*Math.min(1,.18*dt);rocket.x=Math.max(28,Math.min(w-28,rocket.x));rocket.y=h*.72+Math.sin(frame*.08)*5;
+if(Math.random()<.055*dt)spawnStar(-20);if(Math.random()<.012*dt)spawnRock();
+stars.forEach(s=>{s.y+=2.5*dt;s.spin+=.08*dt;if(Math.hypot(s.x-rocket.x,s.y-rocket.y)<38){s.got=true;score++;updateHud()}});stars=stars.filter(s=>!s.got&&s.y<h+30);
+rocks.forEach(r=>r.y+=3*dt);rocks=rocks.filter(r=>r.y<h+40);
+// Rocks are gentle visual obstacles; no losing lives, keeping play friendly.
+if(progress>1050)showLanding();
+}
+function draw(){g.clearRect(0,0,w,h);let grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,'#080d2c');grad.addColorStop(1,'#24276c');g.fillStyle=grad;g.fillRect(0,0,w,h);
+bg.forEach((s,i)=>{g.globalAlpha=s.a*(.7+.3*Math.sin(frame*.04+i));g.fillStyle='#fff';g.beginPath();g.arc(s.x,(s.y+frame*(.35+i%3*.1))%(h+5),s.r,0,7);g.fill()});g.globalAlpha=1;
+drawPlanet();
+stars.forEach(s=>{g.save();g.translate(s.x,s.y);g.rotate(s.spin);g.fillStyle='#ffdf55';g.shadowColor='#ffdf55';g.shadowBlur=12;g.font=`${s.r*2}px system-ui`;g.textAlign='center';g.textBaseline='middle';g.fillText('⭐',0,0);g.restore()});
+rocks.forEach(r=>{g.font=`${r.r*2}px system-ui`;g.textAlign='center';g.fillText('☄️',r.x,r.y)});
+drawRocket(rocket.x,rocket.y);
+}
+function loop(t){let dt=Math.min(2,(t-last)/16.67||1);last=t;if(active)update(dt);draw();requestAnimationFrame(loop)}
+start();\nrequestAnimationFrame(loop);\n})();
+</script>
+</body></html>
